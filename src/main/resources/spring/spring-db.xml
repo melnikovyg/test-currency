@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+       http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <context:property-placeholder location="classpath:prog.properties" system-properties-mode="OVERRIDE"/>
+
+    <context:component-scan base-package="repository"/>
+
+    <beans profile="dev,prod">
+
+        <bean name="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+            <property name="dataSource" ref="dataSource"/>
+            <property name="packagesToScan" value="model"/>
+            <property name="jpaVendorAdapter">
+                <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+                    <property name="showSql" value="true"/>
+                </bean>
+            </property>
+            <property name="jpaPropertyMap">
+                <map>
+                    <entry key="#{T(org.hibernate.cfg.AvailableSettings).FORMAT_SQL}" value="true"/>
+                    <entry key="#{T(org.hibernate.cfg.AvailableSettings).USE_SQL_COMMENTS}" value="true"/>
+                    <entry key="#{T(org.hibernate.cfg.AvailableSettings).JPA_PROXY_COMPLIANCE}" value="false"/>
+                </map>
+            </property>
+        </bean>
+
+        <tx:annotation-driven/>
+
+        <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"
+              p:entityManagerFactory-ref="entityManagerFactory"/>
+
+        <jpa:repositories base-package="repository"/>
+    </beans>
+
+    <beans profile="dev">
+        <jdbc:initialize-database data-source="dataSource" enabled="true">
+            <jdbc:script location="classpath:db/initDB_hsqldb.sql"/>
+            <jdbc:script encoding="utf-8" location="classpath:db/populateDB.sql"/>
+        </jdbc:initialize-database>
+        <bean name="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+            p:driverClassName="org.hsqldb.jdbcDriver"
+            p:url="jdbc:hsqldb:mem:topjava"/>
+    </beans>
+
+    <beans profile="prod">
+
+        <bean name="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+            p:driverClassName="org.postgresql.Driver"
+            p:url="jdbc:postgresql://${DB_IP}:${DB_PORT}/${DB_DATABASE}"
+            p:username="${DB_USER}"
+            p:password="${DB_PASSWORD}"/>
+    </beans>
+</beans>
